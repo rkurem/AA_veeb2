@@ -1,0 +1,25 @@
+{
+  "name": "aa_veeb2",
+  "version": "1.0.0",
+  "description": "Veebiprogrammeerimise 01/10, ei oma mõistlikku sisu",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://rkurem@github.com/rkurem/AA_veeb2.git"
+  },
+  "keywords": [
+    "ülesanne"
+  ],
+  "author": "Remo Kurem",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rkurem/AA_veeb2/issues"
+  },
+  "homepage": "https://github.com/rkurem/AA_veeb2#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
