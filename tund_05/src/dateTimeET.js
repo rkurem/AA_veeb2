@@ -4,15 +4,15 @@ const tellDateET = function(){
 	return timeNow.getDate() + ". " + monthNamesET[timeNow.getMonth()] + " " + timeNow.getFullYear();
 }
 
-const tellWeekDayET = function (){
+const tellWeekDayET = function(){
 	let timeNow = new Date();
 	const weekdayNamesEt = ["pühapäev", "esmaspäev", "teisipäev", "kolmapäev", "neljapäev", "reede", "laupäev"];
 	return weekdayNamesEt[timeNow.getDay()];
 }
 
-const tellTimeET = function (){
+const tellTimeET = function(){
 	let timeNow = new Date();
 	return timeNow.getHours() + ":" + timeNow.getMinutes() + ":" + timeNow.getSeconds();
 }
 
-module.exports = {longDate: tellDateET, weekDay:tellWeekDayET, time: tellTimeET};
+module.exports = {longDate: tellDateET, weekDay: tellWeekDayET, time: tellTimeET};
