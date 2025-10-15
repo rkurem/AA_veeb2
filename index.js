@@ -1,24 +1,14 @@
 const express = require("express");
 const fs = require("fs");
 const bodyparser = require("body-parser");
-//lisan andmebaasiga suhtlemise paketi
-const mysql = require("mysql2");
+//const mysql = require("mysql2/promise");
 const dateEt = require("./src/datetimeET");
-//lisan andmebaasi juurepääsu info
-const dbInfo = require("../../vp2025config");
+//const dbInfo = require("../../vp2025config");
 const textRef = "public/text/vanasonad.txt";
 const app = express();
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(bodyparser.urlencoded({extended: false}));
-
-//loome andmebaasiühenduse
-const conn = mysql.createConnection({
-	host: dbInfo.configData.host,
-	user: dbInfo.configData.user,
-	password: dbInfo.configData.passWord,
-	database: "if25_Aksel_Aisting_AA"
-});
 
 app.get("/", (req, res)=>{
 	res.render("index");
@@ -45,20 +35,18 @@ app.get("/regvisit", (req, res)=>{
 
 app.post("/regvisit", (req, res)=>{
 	console.log(req.body);
-	//avan tekstifaili kirjutamiseks sellisel moel, et kui teda pole, luuakse (parameeter "a")
-	fs.open("public/text/visitlog.txt", "a", (err, file)=>{
+	fs.open("public/txt/visitlog.txt", "a", (err, file)=>{
 		if(err){
 			throw(err);
 		}
 		else {
-			//faili senisele sisule lisamine
-			fs.appendFile("public/text/visitlog.txt", req.body.nameInput + ";", (err)=>{
+			fs.appendFile("public/text/visitlog.txt", req.body.firstNameInput + " " + req.body.lastNameInput + ", " + dateEt.longDate() + " kell " + dateEt.time() + ";", (err)=>{
 				if(err){
 					throw(err);
 				}
 				else {
 					console.log("Salvestatud!");
-					res.render("regvisit");
+					res.render("visitregistered", {visitor: req.body.firstNameInput + " " + req.body.lastNameInput});
 				}
 			});
 		}
@@ -67,9 +55,8 @@ app.post("/regvisit", (req, res)=>{
 
 app.get("/visitlog", (req, res)=>{
 	let listData = [];
-	fs.readFile("public/txt/visitlog.txt", "utf8", (err, data)=>{
+	fs.readFile("public/text/visitlog.txt", "utf8", (err, data)=>{
 		if(err){
-			//kui tuleb viga, siis ikka väljastame veebilehe, liuhtsalt vanasõnu pole ühtegi
 			res.render("genericlist", {heading: "Registreeritud külastused", listData: ["Ei leidnud ühtegi külastust!"]});
 		}
 		else {
@@ -82,53 +69,8 @@ app.get("/visitlog", (req, res)=>{
 	});
 });
 
-app.get("/eestifilm", (req, res)=>{
-	res.render("eestifilm");
-});
-
-app.get("/eestifilm/filmiinimesed", (req, res)=>{
-	const sqlReq = "SELECT * FROM person";
-	//conn.query
-	conn.execute(sqlReq, (err, sqlRes)=>{
-		if(err){
-			console.log(err);
-			res.render("filmiinimesed", {personList: []});
-		}
-		else {
-			console.log(sqlRes);
-			res.render("filmiinimesed", {personList: sqlRes});
-		}
-	});
-	//res.render("filmiinimesed");
-});
-
-app.get("/eestifilm/filmiinimesed_add", (req, res)=>{
-	res.render("filmiinimesed_add", {notice: "Ootan sisestust!"});
-});
-
-app.post("/eestifilm/filmiinimesed_add", (req, res)=>{
-	console.log(req.body);
-	//kontrollime, kas andmed on ikka olemas
-	if(!req.body.firstNameInput || !req.body.lastNameInput || !req.body.bornInput || req.body.bornInput > new Date()){
-		res.render("filmiinimesed_add", {notice: "Andmed on vigased!"});
-	}
-	else {
-		let deceasedDate = null;
-		if(req.body.deceasedInput !=""){
-			deceasedDate = req.body.deceasedInput;
-		}
-		let sqlReq = "INSERT INTO person (first_name, last_name, born, deceased) VALUES (?,?,?,?)";
-		conn.execute(sqlReq, [req.body.firstNameInput, req.body.lastNameInput, req.body.bornInput, req.body.deceasedInput], (err, sqlRes)=>{
-			if(err){
-				console.log(err);
-				res.render("filmiinimesed_add", {notice: "Tekkis tehniline viga: " + err});
-			}
-			else {
-				res.render("filmiinimesed_add", {notice: "Andmed edukalt salvestatud!"});
-			}
-		});
-	}
-	//res.render("filmiinimesed_add");
-});
+//Eesti filmi marsruudid
+const eestifilmRouter = require("./routes/eestifilmRoutes");
+app.use("/eestifilm", eestifilmRouter);
 
 app.listen(5321);
