@@ -1,18 +1,48 @@
 const express = require("express");
 const fs = require("fs");
 const bodyparser = require("body-parser");
-//const mysql = require("mysql2/promise");
+const mysql = require("mysql2/promise");
 const dateEt = require("./src/datetimeET");
-//const dbInfo = require("../../vp2025config");
+const dbInfo = require("../../vp2025config");
 const textRef = "public/text/vanasonad.txt";
 const app = express();
 app.set("view engine", "ejs");
 app.use(express.static("public"));
-//kui vormist tuleb vaid tekst, siis false, kuid muud ka, siis true
+//kui vormist tuleb vaid tekst, siis false, kui muud ka, siis true
 app.use(bodyparser.urlencoded({extended: true}));
 
-app.get("/", (req, res)=>{
-	res.render("index");
+const dbConf = {
+	host: dbInfo.configData.host,
+	user: dbInfo.configData.user,
+	password: dbInfo.configData.passWord,
+	database: dbInfo.configData.dataBase
+};
+
+app.get("/", async (req, res)=>{
+	let conn;
+	try {
+		conn = await mysql.createConnection(dbConf);
+		let sqlReq = "SELECT filename, alttext FROM galleryphotos WHERE id=(SELECT MAX(id) FROM galleryphotos WHERE privacy=? AND deleted IS NULL)";
+		const privacy = 3;
+		const [rows, fields] = await conn.execute(sqlReq, [privacy]);
+		console.log(rows);
+		let imgAlt = "Avalik foto";
+		if(rows[0].alttext != ""){
+			imgAlt = rows[0].alttext;
+		}
+		res.render("index", {imgFile: "gallery/normal/" + rows[0].filename, imgAlt: imgAlt});
+	}
+	catch(err){
+		console.log(err);
+		//res.render("index");
+		res.render("index", {imgFile: "images/otsin_pilte.jpg", imgAlt: "Tunnen end, kui pilti otsiv lammas ..."});
+	}
+	finally {
+		if(conn){
+			await conn.end();
+			console.log("Andmebaasiühendus suletud!");
+		}
+	}
 });
 
 app.get("/timenow", (req, res)=>{
@@ -36,7 +66,7 @@ app.get("/regvisit", (req, res)=>{
 
 app.post("/regvisit", (req, res)=>{
 	console.log(req.body);
-	fs.open("public/txt/visitlog.txt", "a", (err, file)=>{
+	fs.open("public/text/visitlog.txt", "a", (err, file)=>{
 		if(err){
 			throw(err);
 		}
@@ -77,5 +107,9 @@ app.use("/eestifilm", eestifilmRouter);
 //Galeriipildi üleslaadimise marsruudid
 const galleryphotouploadRouter = require("./routes/galleryphotouploadRoutes");
 app.use("/galleryphotoupload", galleryphotouploadRouter);
+
+//Fotogalerii marsruudid
+const photogalleryRouter = require("./routes/photogalleryRoutes");
+app.use("/photogallery", photogalleryRouter);
 
 app.listen(5321);
