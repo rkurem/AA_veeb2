@@ -14,14 +14,53 @@ const dbConfRemo = {
 //@access public
 
 const photogalleryHome = async (req, res)=>{
+	res.redirect("/photogallery/1");
+};
+
+const photogalleryPage = async (req, res)=>{
 	let conn;
+	const photoLimit = 5;
+	const privacy = 2;
+	let page = parseInt(req.params.page);
+	console.log("Lehekülg: " + page);
+	let skip = 0;
 	
 	try {
+		//kontrollime, et kasutajad ei valik liiga v2ikest numbrti või yldse mitte numbrit.
+		if (page < 1|| isNaN(page)){
+			page = 1;
+			return res.redirect("/photogallery/1");
+		}
 		conn = await mysql.createConnection(dbConfRemo);
-		let sqlReq = "SELECT filename, alttext FROM galleryphotos WHERE privacy >= ? AND deleted IS NULL";
-		const privacy = 2;
-		const [rows, fields] = await conn.execute(sqlReq, [privacy]);
-		console.log(rows);
+		let sqlReq = "SELECT COUNT(id) AS photos FROM galleryphotos WHERE privacy >= ? AND deleted is NULL";
+		const [countresult] = await conn.execute(sqlReq, [privacy])
+		const photoCount = countresult[0].photos;
+		//console.log("Fotosid on: " + photoCount);
+		//kontrollime, ega ei ole liiga suur lk Number
+		if((page - 1) * photoLimit >= photoCount){
+			page = Math.max(1, Math.ceil(photoCount / photoLimit));
+			return res.redirect("/photogallery/" + page);
+		}
+		//loon galerii lehtede vahel liikumise nagigatsiooni
+		let galleryLinks;
+		//Eelmine lk 		Järgmine lk
+		if (page === 1){
+			galleryLinks = "Eelmine leht &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;";
+		} else {
+			galleryLinks = `<a href="/photogallery/${page-1}">Eelmine leht</a> &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;`;
+		}
+		if (page * photoLimit >= photoCount){
+			galleryLinks += "Järgmine leht";
+		} else {
+			galleryLinks += `<a href="/photogallery/${page+1}">Järgmine leht</a>`;
+		}
+		
+		skip = (page-1) * photoLimit; 
+		
+		sqlReq = "SELECT filename, alttext FROM galleryphotos WHERE privacy >= ? AND deleted IS NULL LIMIT ?,?";
+		
+		const [rows, fields] = await conn.execute(sqlReq, [privacy, skip,  photoLimit,]);
+		//console.log(rows);
 		let galleryData = [];
 		for (let i = 0; i < rows.length; i ++){
 			let altText = "Galeriipilt";
@@ -30,12 +69,12 @@ const photogalleryHome = async (req, res)=>{
 			}
 			galleryData.push({src: rows[i].filename, alt: altText});
 		}
-		res.render("photogallery", {galleryData: galleryData, imagehref: "/gallery/thumbs/"});
+		res.render("photogallery", {galleryData: galleryData, imagehref: "/gallery/thumbs/" , galleryLinks: galleryLinks});
 	}
 	catch(err){
 		console.log(err);
 		//res.render("galleryphotoupload");
-		res.render("photogallery", {galleryData: [], imagehref: "/gallery/thumbs/"});
+		res.render("photogallery", {galleryData: [], imagehref: "/gallery/thumbs/", galleryLinks: ""});
 	}
 	finally {
 		if(conn){
@@ -46,5 +85,6 @@ const photogalleryHome = async (req, res)=>{
 };
 
 module.exports = {
-	photogalleryHome
+	photogalleryHome,
+	photogalleryPage
 };
