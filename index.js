@@ -2,10 +2,14 @@ const express = require("express");
 const fs = require("fs");
 const bodyparser = require("body-parser");
 const mysql = require("mysql2/promise");
+const session = require("express-session");
 const dateEt = require("./src/datetimeET");
 const dbInfo = require("../../vp2025config");
+const checkLogin = require("./src/checkLogin");
 const textRef = "public/text/vanasonad.txt";
 const app = express();
+//sessiooni kasutamine
+app.use(session({secret: dbInfo.configData.sessionSecret, saveUninitialized: true, resave: true}));
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 //kui vormist tuleb vaid tekst, siis false, kui muud ka, siis true
@@ -43,6 +47,20 @@ app.get("/", async (req, res)=>{
 			console.log("Andmebaasiühendus suletud!");
 		}
 	}
+});
+
+//sisselogitud kasutajate
+app.get("/home", checkLogin.isLogin, (req, res)=>{
+	console.log("Sisse logis kasutaja id: " + req.session.userId);
+	const userName = req.sessionuserFirstName + " " + req.session.userLastName;
+	res.render("home", {userName: userName});
+});
+
+//väljalogimine
+app.get("/logout", (req,res)=>{
+	//tühistame sessiooni
+	req.session.destroy();
+	res.redirect("/");
 });
 
 app.get("/timenow", (req, res)=>{
@@ -115,5 +133,9 @@ app.use("/photogallery", photogalleryRouter);
 //kasutajakonto loomise marsruuidi
 const signupRouter = require("./routes/signupRoutes");
 app.use("/signup", signupRouter);
+
+//sisselogimise marsruuidi
+const signinRouter = require("./routes/signinRoutes");
+app.use("/signin", signinRouter);
 
 app.listen(5321);

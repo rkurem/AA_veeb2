@@ -1,6 +1,10 @@
 const express = require("express");
 
+const checkLogin = require("../src/checkLogin");
+
 const router = express.Router();
+//k6ik siinsed marsruudid kasutavad vahevara:
+router.use(checkLogin.isLogin);
 
 const {
 	photogalleryHome,
